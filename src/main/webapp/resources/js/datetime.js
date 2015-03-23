@@ -1,6 +1,21 @@
 $.prototype.datetime = function()
 {
     var master = create(this);
+    var ELEMENT = this;
+    this.setDateTime=function(dateTime){
+        YEAR = dateTime.getYear() + 1900;
+        MONTH = dateTime.getMonth();
+        DAY = dateTime.getDate();
+        DRAWN_YEAR = YEAR;
+        DRAWN_MONTH = MONTH;
+        HOUR = dateTime.getHours();
+        MINUTE = dateTime.getMinutes();
+        SECOND = dateTime.getSeconds();
+        formatString();
+    };
+    this.getDateTime=function(){
+        return new Date(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND);
+    };
     $('.datetime-input', this).on('keypress', function (e) {
         e.preventDefault();
     });
@@ -248,6 +263,10 @@ $.prototype.datetime = function()
         drawDaysOfMonth();
     };
 
+    function fireChangedEvent()
+    {
+        ELEMENT.trigger({type:'datetimechanged', datetime:ELEMENT.getDateTime()});
+    };
     $(master).on('click', '.day', function (e) {
         var val = $(e.target).attr('data-date');
         var parts = val.split(':');
@@ -257,6 +276,7 @@ $.prototype.datetime = function()
         $(master).hide();
         drawDaysOfMonth();
         formatString();
+        fireChangedEvent();
     });
     $('.days-label', master).on('click', function (e) {
         $('.days', master).hide();
@@ -361,6 +381,7 @@ $.prototype.datetime = function()
         MINUTE = parseInt($('.minute', master).val());
         SECOND = parseInt($('.second', master).val());
         formatString();
+        fireChangedEvent();
     }
 
     $('.hour', master).on('keypress', keypressTime);
