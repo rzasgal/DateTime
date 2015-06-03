@@ -12,7 +12,7 @@
         $(document).ready(function () {
             $('#datetimeComponent').datetime();
             $('#datetimeComponent').on('datetimechanged', function(e){
-               alert(e.datetime);
+//               alert(e.datetime);
             });
         });
         //]]>

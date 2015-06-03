@@ -1,11 +1,12 @@
-$.prototype.datetime = function()
-{
+$.prototype.datetime = function () {
     var master = create(this);
     var ELEMENT = this;
     var inputClasses = this.attr('input-class');
     var inputId = this.attr('input-id');
     var inputName = this.attr('input-name');
-    this.setDateTime=function(dateTime){
+    var MODES ={'DATE_TIME':0, 'DATE':1, 'TIME':2};
+    var defaultMode = MODES.DATE_TIME;
+    this.setDateTime = function (dateTime) {
         YEAR = dateTime.getYear() + 1900;
         MONTH = dateTime.getMonth();
         DAY = dateTime.getDate();
@@ -14,13 +15,111 @@ $.prototype.datetime = function()
         HOUR = dateTime.getHours();
         MINUTE = dateTime.getMinutes();
         SECOND = dateTime.getSeconds();
+        drawDaysOfMonth();
         formatString();
     };
-    this.getDateTime=function(){
+    this.getDateTime = function () {
         return new Date(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND);
     };
-    $('.datetime-input', this).on('keypress', function (e) {
-        e.preventDefault();
+    $('.datetime-input', this).on('blur', function (e) {
+        var input = e.target;
+        var text = input.value;
+        var day = text.substr(0,2);
+        var month = text.substr(3,2);
+        var year = text.substr(6,4);
+        var hour = text.substr(11,2);
+        var minute = text.substr(14,2);
+        var second = text.substr(17,2);
+        var lastDateTime = ELEMENT.getDateTime();
+
+        var newDate = new Date(year, parseInt(month)-1, day, hour, minute, second);
+        //if(newDate.getTime){
+            ELEMENT.setDateTime(newDate);
+            fireChangedEvent();
+        //}
+        //else
+        //    ELEMENT.setDateTime(lastDateTime);
+
+    });
+    $('.datetime-input', this).on('keydown', function (e) {
+        var key = e.keyCode;
+        var input = e.target;
+        var pos = input.selectionStart;
+        var text = input.value;
+        var pre = "";
+        var next = "";
+        var fillerChar = " ";
+        if (text && pos > 0)
+            pre = text.substr(pos - 1, 1);
+        if (text && text.length > pos)
+            next = text.substr(pos, 1);
+
+        if(e.altKey || e.ctrlKey || e.shiftKey || key == 37 || key ==39)
+            return;
+
+        if (key == 8 || key == 46) {
+            var backspace = e.keyCode == 8;
+            var targetChar = backspace ? pre : next;
+            if (key == 8)
+                console.info("BackSpace, Position:" + pos + " " + pre + " " + next);
+            if (key == 46)
+                console.info("Delete, Position:" + pos + " " + pre + " " + next);
+            if (targetChar.length > 0) {
+                e.preventDefault();
+                var targetCharCode = targetChar.charCodeAt(0);
+                var found = findInputSpecChar(targetCharCode);
+                if (found) {
+                    var incr = backspace ? -1:1;
+                    //if (backspace) {
+                        while (pos > 1 && pos < text.length) {
+                            pos += incr;
+                            pre = text.substr(pos +incr, 1);
+                            targetCharCode = pre.charCodeAt(0);
+                            if(!findInputSpecChar(targetCharCode))
+                            {
+                                input.setSelectionRange(pos, pos);
+                                pos = 0;
+                            }
+                        }
+                    //}
+                }else{
+                    var split = backspace ? pos -1 : pos;
+                    var start = text.substr(0, split);
+                    var end = text.substr(split+1);
+                    input.value = start+fillerChar+end;
+                    pos = backspace ? pos -1 : pos+1;
+                    input.setSelectionRange(pos, pos);
+                }
+            }
+        }
+        else{
+            e.preventDefault();
+            var nextSpecialChar = findInputSpecChar(next.charCodeAt(0));
+            if(nextSpecialChar){
+                do{
+                    pos++;
+                    if (text && text.length > pos)
+                        next = text.substr(pos, 1);
+
+                }while(findInputSpecChar(next.charCodeAt(0)));
+            }
+            if(pos < text.length) {
+                var char = String.fromCharCode(e.which);
+                var start = text.substr(0, pos);
+                var end = text.substr(pos+1);
+                text = start+char+end;
+                input.value = text;
+                do{
+                    pos++;
+                    if (text && text.length > pos)
+                        next = text.substr(pos, 1);
+
+                }while(findInputSpecChar(next.charCodeAt(0)));
+                input.setSelectionRange(pos, pos);
+            }
+        }
+
+
     });
     $(this).on('click', function (e) {
         e.stopPropagation();
@@ -28,15 +127,15 @@ $.prototype.datetime = function()
     $(document.body).on('click', function (e) {
         master.hide();
     });
-    $('.datetime-input', this).on('click', function(e){
+    $('.datetime-input', this).on('click', function (e) {
         var input = e.target;
         var text = $('.datetime-input').val();
-        input.setSelectionRange(0, text.length);
-        input.focus();
+        if(text == null || text.length == 0)
+            formatString();
         e.stopImmediatePropagation();
         e.preventDefault();
     });
-    $('.btn', this).on('click', function(e){
+    $('.btn-calendar', this).on('click', function (e) {
         $('.datetime-time', master).hide();
         $('.datetime-date', master).show();
         master.css('display', 'inline-block');
@@ -74,38 +173,35 @@ $.prototype.datetime = function()
         10: 'Kasim',
         11: 'Aralik'
     };
-    function create(element)
-    {
+
+    function create(element) {
         createInput(element);
         return createCalender(element);
     }
-    function createInput(element)
-    {
-        var input =$('<div class="input-group"><input type="text" class="form-control datetime-input"/><span class="input-group-btn"><button class="btn btn-default" style="height: 34px"><span class="glyphicon glyphicon-calendar"/></button></span></div>');
-        if(inputClasses){
+
+    function createInput(element) {
+        var input = $('<div class="input-group"><input type="text" class="form-control datetime-input"/><span class="input-group-btn"><button class="btn btn-default btn-calendar" style="height: 34px"><span class="glyphicon glyphicon-calendar"/></button></span></div>');
+        if (inputClasses) {
             input.addClass(inputClasses);
         }
-        else
-            if(inputId){
-                input.prop('id', inputId);
-            }
-        else
-            if(inputName){
-                input.prop('name', inputName);
-            }
+        else if (inputId) {
+            input.prop('id', inputId);
+        }
+        else if (inputName) {
+            input.prop('name', inputName);
+        }
         element.append(input);
     }
 
-    function createCalender(element)
-    {
+    function createCalender(element) {
         var calenderMaster = $('<div class="datetime-div"></div>');
         createDatePanel(calenderMaster);
         createTimePanel(calenderMaster);
         element.append(calenderMaster);
         return calenderMaster;
     }
-    function createDatePanel(master)
-    {
+
+    function createDatePanel(master) {
         var datePanel = $('<div class="datetime-date"></div>');
         createDaysPanel(datePanel);
         createMonthsPanel(datePanel);
@@ -114,8 +210,8 @@ $.prototype.datetime = function()
         datePanel.append(timeButton);
         master.append(datePanel);
     }
-    function createTimePanel(master)
-    {
+
+    function createTimePanel(master) {
         var timePanel = $('<div class="datetime-time"></div>');
         var content = $('<div style="height: 40px"></div>');
         var hour = $('<div class="col-md-3"><input class="form-control hour" max="23" min="0"/></div>');
@@ -129,8 +225,8 @@ $.prototype.datetime = function()
         timePanel.append(calendarButton);
         master.append(timePanel);
     }
-    function createDaysPanel(datePanel)
-    {
+
+    function createDaysPanel(datePanel) {
         var days = $('<div class="days"></div>');
         var header = $('<div class="days-header"></div>');
         var headerLeftButton = $('<button type="button" class="btn btn-default pre-month pull-left"><span class="glyphicon glyphicon-arrow-left"></span></button>');
@@ -144,8 +240,8 @@ $.prototype.datetime = function()
         days.append(content);
         datePanel.append(days);
     }
-    function createYearsPanel(datePanel)
-    {
+
+    function createYearsPanel(datePanel) {
         var years = $('<div class="years"></div>');
         var header = $('<div class="years-header"></div>');
         var headerLeftButton = $('<button type="button" class="btn btn-default pre-years pull-left"><span class="glyphicon glyphicon-arrow-left"></span></button>');
@@ -159,8 +255,8 @@ $.prototype.datetime = function()
         years.append(content);
         datePanel.append(years);
     }
-    function createMonthsPanel(datePanel)
-    {
+
+    function createMonthsPanel(datePanel) {
         var months = $('<div class="months"></div>');
         var header = $('<div class="months-header"></div>');
         var headerLeftButton = $('<button type="button" class="btn btn-default pull-left pre-year"><span class="glyphicon glyphicon-arrow-left"></span></button>');
@@ -221,18 +317,18 @@ $.prototype.datetime = function()
             div.append(span);
         }
     }
-    function formatPart(part)
-    {
-        return part.toString().length > 1 ? part.toString() : '0'+part.toString();
+
+    function formatPart(part) {
+        return part.toString().length > 1 ? part.toString() : '0' + part.toString();
     }
-    function formatString()
-    {
+
+    function formatString() {
         var dayLabel = formatPart(DAY);
-        var monthLabel = formatPart(MONTH+1);
+        var monthLabel = formatPart(MONTH + 1);
         var hourLabel = formatPart(HOUR);
         var minuteLabel = formatPart(MINUTE);
         var secondLabel = formatPart(SECOND);
-        $('.datetime-input').val(dayLabel + ' / ' + monthLabel + ' / ' + YEAR+ ' '+hourLabel+':'+minuteLabel+':'+secondLabel);
+        $('.datetime-input').val(dayLabel + '/' + monthLabel + '/' + YEAR + '-' + hourLabel + ':' + minuteLabel + ':' + secondLabel);
     }
 
     function drawDaysOfMonth() {
@@ -293,9 +389,8 @@ $.prototype.datetime = function()
         drawDaysOfMonth();
     };
 
-    function fireChangedEvent()
-    {
-        ELEMENT.trigger({type:'datetimechanged', datetime:ELEMENT.getDateTime()});
+    function fireChangedEvent() {
+        ELEMENT.trigger({type: 'datetimechanged', datetime: ELEMENT.getDateTime()});
     };
     $(master).on('click', '.day', function (e) {
         var val = $(e.target).attr('data-date');
@@ -386,6 +481,9 @@ $.prototype.datetime = function()
     $('.time-button', master).on('click', function () {
         $('.datetime-date', master).hide();
         $('.datetime-time', master).show();
+        $('.hour', master).val(HOUR);
+        $('.minute', master).val(MINUTE);
+        $('.second', master).val(SECOND);
     });
     $('.date-button', master).on('click', function () {
         $('.datetime-time', master).hide();
@@ -420,5 +518,13 @@ $.prototype.datetime = function()
     $('.minute', master).on('blur', blurReset);
     $('.second', master).on('keypress', keypressTime);
     $('.second', master).on('blur', blurReset);
-
+    function findInputSpecChar(keycode) {
+        var specialChars = [58, 47, 45];
+        for (var i = 0; i < specialChars.length; i++) {
+            var sc = specialChars[i];
+            if (sc == keycode)
+                return true;
+        }
+        return false;
+    }
 }
