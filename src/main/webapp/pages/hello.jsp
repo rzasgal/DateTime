@@ -22,13 +22,12 @@
 <div class="container">
     <div class="row">
         <div class="col-md-8 col-lg-8" style="height:200px">
-            <form>
+            <form role="form" class="form-horizontal">
                 <div class="form-group">
                     <label for="name" class="control-label col-md-3">Name</label>
 
                     <div class="col-md-9">
                         <input type="text" class="form-control" id="name" name="name"/>
-                        <input type="datetime-local" class="form-control"/>
                     </div>
                 </div>
                 <div class="form-group">

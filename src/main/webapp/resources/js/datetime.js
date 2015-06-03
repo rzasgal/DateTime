@@ -2,6 +2,9 @@ $.prototype.datetime = function()
 {
     var master = create(this);
     var ELEMENT = this;
+    var inputClasses = this.attr('input-class');
+    var inputId = this.attr('input-id');
+    var inputName = this.attr('input-name');
     this.setDateTime=function(dateTime){
         YEAR = dateTime.getYear() + 1900;
         MONTH = dateTime.getMonth();
@@ -26,7 +29,22 @@ $.prototype.datetime = function()
         master.hide();
     });
     $('.datetime-input', this).on('click', function(e){
+        var input = e.target;
+        var text = $('.datetime-input').val();
+        input.setSelectionRange(0, text.length);
+        input.focus();
+        e.stopImmediatePropagation();
+        e.preventDefault();
+    });
+    $('.btn', this).on('click', function(e){
+        $('.datetime-time', master).hide();
+        $('.datetime-date', master).show();
         master.css('display', 'inline-block');
+        DRAWN_YEAR = YEAR;
+        DRAWN_MONTH = MONTH;
+        drawDaysOfMonth();
+        e.stopImmediatePropagation();
+        e.preventDefault();
     });
     var currentDate = new Date();
     var YEAR = currentDate.getYear() + 1900;
@@ -63,7 +81,18 @@ $.prototype.datetime = function()
     }
     function createInput(element)
     {
-        var input =$('<input type="text" class="form-control datetime-input"/>');
+        var input =$('<div class="input-group"><input type="text" class="form-control datetime-input"/><span class="input-group-btn"><button class="btn btn-default" style="height: 34px"><span class="glyphicon glyphicon-calendar"/></button></span></div>');
+        if(inputClasses){
+            input.addClass(inputClasses);
+        }
+        else
+            if(inputId){
+                input.prop('id', inputId);
+            }
+        else
+            if(inputName){
+                input.prop('name', inputName);
+            }
         element.append(input);
     }
 
@@ -199,7 +228,7 @@ $.prototype.datetime = function()
     function formatString()
     {
         var dayLabel = formatPart(DAY);
-        var monthLabel = formatPart(MONTH);
+        var monthLabel = formatPart(MONTH+1);
         var hourLabel = formatPart(HOUR);
         var minuteLabel = formatPart(MINUTE);
         var secondLabel = formatPart(SECOND);
@@ -255,6 +284,7 @@ $.prototype.datetime = function()
         }
         $('.days', master).show();
         $('.months', master).hide();
+        $('.years', master).hide();
         syncDaysLabel();
     };
     drawDaysOfMonth();
